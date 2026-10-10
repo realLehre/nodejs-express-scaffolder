@@ -1,0 +1,25 @@
+{
+  "name": "nodejs-express-scaffolder",
+  "version": "1.0.0",
+  "description": "An interactive CLI for scaffolding NodeJs and Express projects",
+  "type": "module",
+  "bin": {
+    "nodejs-express-scaffolder": "./src/index.js"
+  },
+  "main": "index.js",
+  "scripts": {
+    "start": "node src/index.js"
+  },
+  "keywords": [
+    "express",
+    "nodejs",
+    "cli",
+    "typescript",
+    "scaffolding"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@inquirer/prompts": "^8.7.3"
+  }
+}
