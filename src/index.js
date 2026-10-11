@@ -4,49 +4,67 @@ import { spawn } from "node:child_process";
 import { generateProject } from "./generator.js";
 
 async function main() {
-  console.log("\n🚀 Express Starter CLI\n");
+  const args = process.argv.slice(2);
 
-  const projectName = await input({
-    message: "Enter your project name",
-    default: "my-express-app",
-    validate: (input) => {
-      if (input.trim() === "" || !input) {
-        return "Project name is required";
-      }
-      return true;
-    },
-  });
+  console.log("args", args);
 
-  const language = await select({
-    message: "Which language do you want to use?",
-    choices: [
-      { name: "JavaScript", value: "javascript" },
-      { name: "TypeScript", value: "typescript" },
-    ],
-  });
+  const projectNameArgs = args.find((arg) => !arg.startsWith("--"));
 
-  const packages = await checkbox({
-    message: "Which packages do you want to include?",
-    choices: [
-      { name: "Mongoose", value: "mongoose" },
-      { name: "dotenv - Environment variables", value: "dotenv" },
-      {
-        name: "cors - Cross-origin requests",
-        value: "cors",
+  console.log("projectNameArgs", projectNameArgs);
+
+  const skipPrompts = args.includes("--yes") || args.includes("--skip-prompts");
+
+  console.log("skipPrompts", skipPrompts);
+
+  const projectName =
+    projectNameArgs ||
+    (await input({
+      message: "Enter your project name",
+      default: "my-express-index",
+      validate: (input) => {
+        if (input.trim() === "" || !input) {
+          return "Project name is required";
+        }
+        return true;
       },
-      {
-        name: "morgan - HTTP request logger middleware for node.js",
-        value: "morgan",
-      },
-    ],
-    instructions: "(Use Space to select, Enter to confirm)",
-  });
+    }));
 
+  let language = "javascript";
+  let packages = [];
   let confirmMongoose = false;
-  if (packages.includes("mongoose")) {
-    confirmMongoose = await confirm({
-      message: "Do you want to initialize a MongoDB connection setup?",
+
+  if (!skipPrompts) {
+    language = await select({
+      message: "Which language do you want to use?",
+      choices: [
+        { name: "JavaScript", value: "javascript" },
+        { name: "TypeScript", value: "typescript" },
+      ],
     });
+
+    packages = await checkbox({
+      message: "Which packages do you want to include?",
+      choices: [
+        { name: "Mongoose", value: "mongoose" },
+        { name: "dotenv - Environment variables", value: "dotenv" },
+        {
+          name: "cors - Cross-origin requests",
+          value: "cors",
+        },
+        {
+          name: "morgan - HTTP request logger middleware for node.js",
+          value: "morgan",
+        },
+      ],
+      instructions: "(Use Space to select, Enter to confirm)",
+    });
+
+    confirmMongoose = false;
+    if (packages.includes("mongoose")) {
+      confirmMongoose = await confirm({
+        message: "Do you want to initialize a MongoDB connection setup?",
+      });
+    }
   }
 
   console.log("\nYour configuration:\n");
@@ -68,42 +86,44 @@ async function main() {
   console.log("\nInstalling dependencies...");
 
   const dependencies = ["express", ...packages];
-  const devDependencies = ["nodemon"];
+  const devDependencies = ["nodemon@^3.1.14"];
 
-  if (isTypeScript) {
-    devDependencies.push("typescript", "tsx", "@types/node", "@types/express");
+  if (!skipPrompts) {
+    if (isTypeScript) {
+      devDependencies.push("@types/express", "typescript@^5.9", "ts-node");
+    }
+
+    if (packages.includes("cors") && isTypeScript) {
+      devDependencies.push("@types/cors");
+    }
+
+    if (packages.includes("morgan") && isTypeScript) {
+      devDependencies.push("@types/morgan");
+    }
   }
 
-  if (packages.includes("cors") && isTypeScript) {
-    devDependencies.push("@types/cors");
-  }
-
-  if (packages.includes("morgan") && isTypeScript) {
-    devDependencies.push("@types/morgan");
-  }
-
-  const install = (args) =>
-    new Promise((resolve, reject) => {
-      const child = spawn("npm", args, {
-        cwd: projectPath,
-        stdio: "inherit",
-        shell: process.platform === "win32",
-      });
-
-      child.on("error", reject);
-
-      child.on("close", (code) => {
-        if (code === 0) {
-          resolve();
-        } else {
-          reject(new Error(`npm exited with code $DIL1`));
-        }
-      });
-    });
+  // const install = (args) =>
+  //   new Promise((resolve, reject) => {
+  //     const child = spawn("npm", args, {
+  //       cwd: projectPath,
+  //       stdio: "inherit",
+  //       shell: process.platform === "win32",
+  //     });
+  //
+  //     child.on("error", reject);
+  //
+  //     child.on("close", (code) => {
+  //       if (code === 0) {
+  //         resolve();
+  //       } else {
+  //         reject(new Error(`npm exited with code $DIL1`));
+  //       }
+  //     });
+  //   });
 
   try {
-    await install(["install", ...dependencies]);
-    await install(["install", "-D", ...devDependencies]);
+    await install(dependencies, projectPath);
+    await install(devDependencies, projectPath, true);
 
     console.log("\nProject created successfully!");
     console.log(
@@ -128,3 +148,31 @@ main().catch((error) => {
   console.error("An error occurred:", error);
   process.exitCode = 1;
 });
+
+function install(packages, projectPath, isDev = false) {
+  return new Promise((resolve, reject) => {
+    const args = ["install", ...packages];
+
+    if (isDev) {
+      args.push("--save-dev");
+    }
+
+    const child = spawn("npm", args, {
+      cwd: projectPath,
+      stdio: "inherit",
+      shell: process.platform === "win32",
+    });
+
+    child.on("error", (error) => {
+      reject(error);
+    });
+
+    child.on("close", (code) => {
+      if (code === 0) {
+        resolve();
+      } else {
+        reject(new Error(`npm install exited with code ${code}`));
+      }
+    });
+  });
+}

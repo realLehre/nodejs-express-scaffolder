@@ -45,7 +45,6 @@ export async function generateProject({
   const hasCors = packages.includes("cors");
   const hasHelmet = packages.includes("helmet");
   const hasMorgan = packages.includes("morgan");
-  const hasMongoose = packages.includes("mongoose");
 
   const middlewareImports = [
     hasCors ? "import cors from 'cors';" : "",
@@ -63,72 +62,74 @@ export async function generateProject({
     .filter(Boolean)
     .join("\n");
 
-  const appContent = `
-    import express from 'express';
-    ${middlewareImports}
-    
-    const app = express();
-    
-    app.use(express.json());
-    ${middlewareSetup}
-    
-    app.get('/', (_req, res) => {
-      res.json({
-        message: 'Express server is running!'
-      });
-    });
-    
-    export default app;`.trimStart();
+  const appContent = `import express from 'express';
+${middlewareImports}
+
+const app = express();
+
+app.use(express.json());
+${middlewareSetup}
+
+  
+app.get('/', (_req, res) => {
+  res.json({
+    message: 'Express server is running!'
+  });
+});
+
+export default app;
+`;
 
   const serverStartup = confirmMongoose
     ? `
-    const startServer = async () => {
-      await connectToDatabase(process.env.MONGODB_URI);
-      app.listen(PORT, () => {
-        console.log(\`Server running on port \${PORT}\`);
-      });
-    };
+const startServer = async () => {
+  await connectToDatabase(process.env.MONGODB_URI);
+  app.listen(PORT, () => {
+    console.log(\`Server running on port \${PORT}\`);
+  });
+};
     
-    startServer();`
+startServer();`
     : `app.listen(PORT, () => {
-      console.log(\`Server running on port \${PORT}\`);
-    });`;
+  console.log(\`Server running on port \${PORT}\`);
+});
+    `;
 
   const serverContent = `
-    ${hasDotenv ? "import 'dotenv/config';" : ""}
-    
-    ${confirmMongoose ? "import connectToDatabase from './db/dbConnection." + (isTypeScript ? "ts" : "js") + "';" : ""}
-    import app from './app.${isTypeScript ? "js" : "js"}';
-    
-    const PORT = process.env.PORT || 3000;
-    
-    ${serverStartup}`.trimStart();
+${hasDotenv ? "import 'dotenv/config';" : ""}
 
-  const dbConnectionContent = `
-    import mongoose from 'mongoose';
-    
-    const connectToDatabase = async (uri) => {
-      try {
-        await mongoose.connect(uri);
-        console.log("Connected to MongoDB");
-      } catch (error) {
-        console.error("Error connecting to MongoDB:", error);
-        process.exit(1);
-      }
-    };
-    
-    export default connectToDatabase;`;
+${confirmMongoose ? "import connectToDatabase from './db/dbConnection';" : ""}
+import app from './app${isTypeScript ? "" : ".js"}';
+
+// create a .env file and add your environment variables
+const PORT = process.env.PORT || 3000;
+
+${serverStartup}
+`.trimStart();
+
+  const dbConnectionContent = `import mongoose from 'mongoose';
+
+const connectToDatabase = async (uri${isTypeScript ? ": string" : ""}) => {
+  try {
+    await mongoose.connect(uri);
+    console.log("Connected to MongoDB");
+  } catch (error) {
+    console.error("Error connecting to MongoDB:", error);
+  }
+};
+
+export default connectToDatabase;
+    `;
 
   const packageJson = {
     name: projectName,
     version: "1.0.0",
     private: true,
-    type: "module",
     scripts: isTypeScript
       ? {
           dev: "nodemon",
           build: "tsc",
-          start: "node dist/index.js",
+          start: "node dist/server.js",
         }
       : {
           dev: "nodemon src/server.js",
@@ -137,6 +138,8 @@ export async function generateProject({
     dependencies: {},
     devDependencies: {},
   };
+
+  if (!isTypeScript) packageJson["type"] = "module";
 
   const tsconfig = {
     compilerOptions: {
@@ -156,7 +159,7 @@ export async function generateProject({
     watch: ["src"],
     ext: "ts",
     ignore: ["src/**/*.spec.ts"],
-    exec: "ts-node ./src/index.ts",
+    exec: "ts-node ./src/server.ts",
   };
 
   const files = [
