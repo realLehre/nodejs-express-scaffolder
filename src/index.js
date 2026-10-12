@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import { input, select, checkbox, confirm } from "@inquirer/prompts";
 import { spawn } from "node:child_process";
 
@@ -6,15 +7,9 @@ import { generateProject } from "./generator.js";
 async function main() {
   const args = process.argv.slice(2);
 
-  console.log("args", args);
-
   const projectNameArgs = args.find((arg) => !arg.startsWith("--"));
 
-  console.log("projectNameArgs", projectNameArgs);
-
   const skipPrompts = args.includes("--yes") || args.includes("--skip-prompts");
-
-  console.log("skipPrompts", skipPrompts);
 
   const projectName =
     projectNameArgs ||
@@ -73,7 +68,6 @@ async function main() {
     projectName,
     language,
     packages,
-    confirmMongoose,
   });
 
   const { projectPath, isTypeScript } = await generateProject({
@@ -102,32 +96,13 @@ async function main() {
     }
   }
 
-  // const install = (args) =>
-  //   new Promise((resolve, reject) => {
-  //     const child = spawn("npm", args, {
-  //       cwd: projectPath,
-  //       stdio: "inherit",
-  //       shell: process.platform === "win32",
-  //     });
-  //
-  //     child.on("error", reject);
-  //
-  //     child.on("close", (code) => {
-  //       if (code === 0) {
-  //         resolve();
-  //       } else {
-  //         reject(new Error(`npm exited with code $DIL1`));
-  //       }
-  //     });
-  //   });
-
   try {
     await install(dependencies, projectPath);
     await install(devDependencies, projectPath, true);
 
     console.log("\nProject created successfully!");
     console.log(
-      "Next steps:\n  cd " + "" + projectPath + "",
+      "Next steps:\n  cd " + "'" + projectPath + "'",
       "\n  npm run dev",
     );
   } catch (error) {

@@ -6,6 +6,11 @@
   "bin": {
     "nodejs-express-scaffolder": "./src/index.js"
   },
+  "files": [
+    "src/index.js",
+    "src/generator.js",
+    "README.md"
+  ],
   "main": "index.js",
   "scripts": {
     "start": "node src/index.js"
@@ -15,8 +20,13 @@
     "nodejs",
     "cli",
     "typescript",
-    "scaffolding"
+    "scaffolding",
+    "scaffolder",
+    "nodejs"
   ],
+  "engines": {
+    "node": ">=20"
+  },
   "author": "",
   "license": "ISC",
   "dependencies": {
