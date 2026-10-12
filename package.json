@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "An interactive CLI for scaffolding NodeJs and Express projects",
   "type": "module",
+  "publishConfig": {
+    "access": "public"
+  },
   "bin": {
     "nodejs-express-scaffolder": "./src/index.js"
   },
